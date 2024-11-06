@@ -1,4 +1,4 @@
-# API_Sketch2D
+# Fusion360 Sketch To 3d
 
 This project contains scripts for converrting 2D sketches oto 3d model using the Autodesk Fusion 360 API.
 
