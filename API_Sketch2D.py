@@ -1,5 +1,5 @@
-#Author- Chaitanya Katti
-#Description- This script imports 2D sketches from DXF files and extrudes them to create a 3D model.
+# Author- Chaitanya Katti
+# Description- This script imports 2D sketches from DXF files and extrudes them to create a 3D model.
 
 import adsk.core, adsk.fusion, adsk.cam, traceback, os
 from time import sleep
@@ -123,10 +123,10 @@ def negativeExtrudeSketch(rootComp: adsk.fusion.Component,
 def run(context):
     ui = None
     try:
-        app = adsk.core.Application.get()
-        ui  = app.userInterface
-        design = app.activeProduct
-        importManager = app.importManager
+        app: adsk.core.Application = adsk.core.Application.get()
+        ui: adsk.core.UserInterface = app.userInterface
+        design: adsk.core.Product = app.activeProduct
+        importManager: adsk.core.ImportManager = app.importManager
         rootComp: adsk.fusion.Component = design.rootComponent
         # Set unit in m
         adsk.fusion.Design.cast(app.activeProduct).fusionUnitsManager.distanceDisplayUnits = adsk.fusion.DistanceUnits.MeterDistanceUnits
@@ -144,7 +144,7 @@ def run(context):
         # Extrude all the sketches
         for sketch in sketches:
             positiveExtrudeSketch(rootComp, sketch)
-            ui.inputBox('Press Enter to continue')
+
         # Add a bounding square to the sketch
         for sketch in sketches:
             addBoundingSquareToSketch(sketch)
