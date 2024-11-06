@@ -2,9 +2,11 @@
 # Description- This script imports 2D sketches from DXF files and extrudes them to create a 3D model.
 
 import adsk.core, adsk.fusion, adsk.cam, traceback, os
-from time import sleep
+import sys
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+from dxf_parser import parse_view
 
-sketchDir = 'HollowFrame'
+sketchDir = 'L'
 
 def clearAll(rootComp: adsk.fusion.Component):
     for sketch in rootComp.sketches:
@@ -18,12 +20,12 @@ def clearAll(rootComp: adsk.fusion.Component):
     for point in rootComp.constructionPoints:
         point.deleteMe()
 
-def createOffsetPlane(rootComp: adsk.fusion.Component, 
-                      offset: float, 
+def createOffsetPlane(rootComp: adsk.fusion.Component,
+                      offset: float,
                       direction: str) -> adsk.fusion.ConstructionPlane:
     # Create offset construction plane
     planes = rootComp.constructionPlanes
-    planeInput = planes.createInput()
+    planeInput: adsk.fusion.ConstructionPlaneInput = planes.createInput()
     offsetValue = adsk.core.ValueInput.createByString(str(offset))
     if direction == 'x':
         planeInput.setByOffset(rootComp.yZConstructionPlane, offsetValue)
@@ -31,21 +33,24 @@ def createOffsetPlane(rootComp: adsk.fusion.Component,
         planeInput.setByOffset(rootComp.xZConstructionPlane, offsetValue)
     elif direction == 'z':
         planeInput.setByOffset(rootComp.xYConstructionPlane, offsetValue)
-    return planes.add(planeInput)
-        
-def createSketch(rootComp: adsk.fusion.Component, 
-                 importManager: adsk.core.ImportManager, 
+
+    constructionPlane =  planes.add(planeInput)
+    constructionPlane.isLightBulbOn = False
+    return constructionPlane
+
+def loadAndCreateSketches(rootComp: adsk.fusion.Component,
+                 importManager: adsk.core.ImportManager,
                  sketchDir: str):
     # Get the sketches collection
     sketches = rootComp.sketches
     planes = rootComp.constructionPlanes
 
     # Create back plane (offset in Y direction)
-    yOffsetPlane = createOffsetPlane(rootComp, 1, 'y')    
+    yOffsetPlane = createOffsetPlane(rootComp, 1, 'y')
     # Create top plane (offset in Z direction)
     zOffsetPlane = createOffsetPlane(rootComp, 1, 'z')
     # Create right plane (offset in X direction)
-    xOffsetPlane = createOffsetPlane(rootComp, 1, 'x')    
+    xOffsetPlane = createOffsetPlane(rootComp, 1, 'x')
 
     # Import the DXF files and create sketches
     dxfFiles = ['Front.dxf', 'Back.dxf', 'Bottom.dxf', 'Top.dxf', 'Left.dxf', 'Right.dxf']
@@ -74,16 +79,18 @@ def addBoundingSquareToSketch(sketch: adsk.fusion.Sketch):
 def positiveExtrudeSketch(rootComp: adsk.fusion.Component, sketch: adsk.fusion.Sketch):
     # Get the extrudes collection
     extrudes = rootComp.features.extrudeFeatures
-    # Extrude the sketch
-    extrudeInput = extrudes.createInput(sketch.profiles.item(0), adsk.fusion.FeatureOperations.JoinFeatureOperation)
-    extent_distance = adsk.fusion.DistanceExtentDefinition.create(adsk.core.ValueInput.createByString('1 m'))
-    if sketch.name in ['Top', 'Right', 'Back']:
-        extrudeInput.setOneSideExtent(extent_distance, adsk.fusion.ExtentDirections.NegativeExtentDirection)
-    else:
-        extrudeInput.setOneSideExtent(extent_distance, adsk.fusion.ExtentDirections.PositiveExtentDirection)
-    extrude = extrudes.add(extrudeInput)
-    body = extrude.bodies.item(0)
-    body.name = sketch.name + " Positive Extrusion"
+
+    # Extrude all the profiles in the sketch
+    for profile in sketch.profiles:
+        extrudeInput = extrudes.createInput(profile, adsk.fusion.FeatureOperations.JoinFeatureOperation)
+        extent_distance = adsk.fusion.DistanceExtentDefinition.create(adsk.core.ValueInput.createByString('1 m'))
+        if sketch.name in ['Top', 'Right', 'Back']:
+            extrudeInput.setOneSideExtent(extent_distance, adsk.fusion.ExtentDirections.NegativeExtentDirection)
+        else:
+            extrudeInput.setOneSideExtent(extent_distance, adsk.fusion.ExtentDirections.PositiveExtentDirection)
+        extrude = extrudes.add(extrudeInput)
+        body = extrude.bodies.item(0)
+        body.name = sketch.name + " Positive Extrusion"
 
 def negativeExtrudeSketch(rootComp: adsk.fusion.Component,
                           sketch: adsk.fusion.Sketch):
@@ -120,6 +127,12 @@ def negativeExtrudeSketch(rootComp: adsk.fusion.Component,
         ui = adsk.core.Application.get().userInterface
         ui.messageBox('No profile found for sketch: {}'.format(sketch.name))
 
+def negativeExtrudeSketchProfile(rootComp: adsk.fusion.Component,
+                                    sketch: adsk.fusion.Sketch,
+                                    views: set):
+    pass
+
+
 def run(context):
     ui = None
     try:
@@ -128,8 +141,11 @@ def run(context):
         design: adsk.core.Product = app.activeProduct
         importManager: adsk.core.ImportManager = app.importManager
         rootComp: adsk.fusion.Component = design.rootComponent
-        # Set unit in m
-        adsk.fusion.Design.cast(app.activeProduct).fusionUnitsManager.distanceDisplayUnits = adsk.fusion.DistanceUnits.MeterDistanceUnits
+    
+        # app.activeProduct.unitsManager.defaultLengthUnits = adsk.fusion.DistanceUnits.MeterDistanceUnits
+        # defaultUnits = app.activeProduct.unitsManager.defaultLengthUnits
+        # defaultUnits.
+        # app.preferences.defaultUnitsPreferences.item(0) = adsk.fusion.DistanceUnits.MeterDistanceUnits
 
         # Clear all existing sketches, bodies, construction planes, construction axes, and construction points
         for _ in range(10):
@@ -139,20 +155,26 @@ def run(context):
         sketches = rootComp.sketches
 
         # Create a new sketch on the xy plane
-        createSketch(rootComp, importManager, sketchDir)
-        
+        loadAndCreateSketches(rootComp, importManager, sketchDir)
+
         # Extrude all the sketches
         for sketch in sketches:
             positiveExtrudeSketch(rootComp, sketch)
-
+            ui.inputBox('Press Enter to continue')
         # Add a bounding square to the sketch
         for sketch in sketches:
             addBoundingSquareToSketch(sketch)
-
         # Negative extrude each sketch area outside the main sketch area but inside the bounding square
         for sketch in sketches:
             negativeExtrudeSketch(rootComp, sketch)
+
+        front, back, left, right, bottom, top = parse_view(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sketches', sketchDir))
+        views = {front, back, left, right, bottom, top}
         
+        # Negative exturde individual profiles by estimating the depth of each profile inside a sketch using other views
+        for sketch in sketches:
+            negativeExtrudeSketchProfile(rootComp, sketch, views)
+
         # Rename the bodies
         for body in rootComp.bRepBodies:
             if 'Positive Extrusion' in body.name:

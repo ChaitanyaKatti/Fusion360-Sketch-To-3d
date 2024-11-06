@@ -14,27 +14,39 @@ def print_entity(e):
 def parse_view(folder_path):
     # Initialize dictionaries for each view
     front = {"Points": [], "Lines": []}  # X Z plane looking along +Y axis
+    back = {"Points": [], "Lines": []}  # X Z plane looking along -Y axis
+    left = {"Points": [], "Lines": []}  # Y Z plane looking along +X axis
     right = {"Points": [], "Lines": []}  # Y Z plane looking along -X axis
+    bottom = {"Points": [], "Lines": []}    # X Y plane looking along +Z axis
     top = {"Points": [], "Lines": []}    # X Y plane looking along -Z axis
 
     for file in os.listdir(folder_path):
         if file.endswith(".dxf"):
             doc = ezdxf.readfile(os.path.join(folder_path, file))
-            if file == "front.dxf":
+            if file == "Front.dxf":
                 parse_entities(doc, front, "XZ")
-            elif file == "right.dxf":
+            if file == "Back.dxf":
+                parse_entities(doc, back, "XZ")
+            elif file == "Left.dxf":
+                parse_entities(doc, left, "YZ")
+            elif file == "Right.dxf":
                 parse_entities(doc, right, "YZ")
-            elif file == "top.dxf":
+            elif file == "Bottom.dxf":
+                parse_entities(doc, bottom, "XY")
+            elif file == "Top.dxf":
                 parse_entities(doc, top, "XY")
             else:
                 print("Invalid file:", file)
 
     # Simplify edges for each view
     simplify_lines(front)
+    simplify_lines(back)
+    simplify_lines(left)
     simplify_lines(right)
+    simplify_lines(bottom)
     simplify_lines(top)
-
-    return front, right, top
+    
+    return front, back, left, right, bottom, top
 
 def project_point(point, projection_plane):
     if projection_plane == "XY": # Top view
@@ -46,7 +58,7 @@ def project_point(point, projection_plane):
     else:
         raise ValueError("Invalid projection plane")
 
-def parse_entities(doc, view_dict, projection_plane="XY"):
+def parse_entities(doc, view_dict, projection_plane):
     points = view_dict["Points"]
     lines = view_dict["Lines"]
 
@@ -143,7 +155,7 @@ def neighbour_map(view_dict):
 
 if __name__ == "__main__":
     folder_path = "./sketches/U"
-    front, right, top = parse_view(folder_path)
+    front, right, top, _, _, _ = parse_view(folder_path)
     print("Front view:", front, end="\n\n")
     print("Right view:", right, end="\n\n")
     print("Top view:", top, end="\n\n")
