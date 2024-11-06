@@ -10,9 +10,10 @@ This project contains scripts for converrting 2D sketches oto 3d model using the
 
 ## Installation
 
-1. Open "Command Prompt" and navigate to the `Scripts` folder.
+1. Open "Command Prompt" and run the following commands to install the `ezdxf` module.
     ```sh
-    cd C:\Users\katti\AppData\Local\Autodesk\webdeploy\production\c4a5520f9bb0f0174c02662af8bd1ab67cee6298\Python
+    # Replace <USERNAME> with your username
+    cd C:\Users\<USERNAME>\AppData\Local\Autodesk\webdeploy\production\c4a5520f9bb0f0174c02662af8bd1ab67cee6298\Python
     
     # Open python
     .\python.exe
@@ -24,8 +25,12 @@ This project contains scripts for converrting 2D sketches oto 3d model using the
     ```
 2. Open Fusion 360 and go to the `Scripts and Add-Ins` panel. Create a new script.
 
-3. Goto the Scipts folder and git clone the repository.
+3. Goto the Scipts folder and clone the repository.
     ```sh
+    # Replace <USERNAME> with your username and <SCRIPT_NAME> with the name of the script
+    cd C:\Users\<USERNAME>\AppData\Roaming\Autodesk\Autodesk Fusion 360\API\Scripts\<SCRIPT_NAME>
+
+    # Clone the repository
     git clone https://github.com/ChaitanyaKatti/Fusion360-Sketch-To-3d.git
     ```
 
