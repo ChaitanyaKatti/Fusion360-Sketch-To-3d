@@ -6,7 +6,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from dxf_parser import parse_view
 
-sketchDir = 'L'
+sketchDir = 'Chamfer'
 
 def clearAll(rootComp: adsk.fusion.Component):
     for sketch in rootComp.sketches:
@@ -53,9 +53,9 @@ def loadAndCreateSketches(rootComp: adsk.fusion.Component,
     xOffsetPlane = createOffsetPlane(rootComp, 1, 'x')
 
     # Import the DXF files and create sketches
-    dxfFiles = ['Front.dxf', 'Back.dxf', 'Bottom.dxf', 'Top.dxf', 'Left.dxf', 'Right.dxf']
-    planes = [rootComp.xZConstructionPlane, yOffsetPlane, rootComp.xYConstructionPlane, zOffsetPlane, rootComp.yZConstructionPlane, xOffsetPlane]
-    names = ['Front', 'Back', 'Bottom', 'Top', 'Left', 'Right']
+    dxfFiles = ['Front.dxf', 'Back.dxf', 'Left.dxf', 'Right.dxf', 'Bottom.dxf', 'Top.dxf']
+    planes = [rootComp.xZConstructionPlane, yOffsetPlane, rootComp.yZConstructionPlane, xOffsetPlane, rootComp.xYConstructionPlane, zOffsetPlane]
+    names = ['Front', 'Back', 'Left', 'Right', 'Bottom', 'Top']
 
     # Import the DXF files and create sketches
     for dxfFile, plane, name in zip(dxfFiles, planes, names):
@@ -127,10 +127,45 @@ def negativeExtrudeSketch(rootComp: adsk.fusion.Component,
         ui = adsk.core.Application.get().userInterface
         ui.messageBox('No profile found for sketch: {}'.format(sketch.name))
 
-def negativeExtrudeSketchProfile(rootComp: adsk.fusion.Component,
-                                    sketch: adsk.fusion.Sketch,
-                                    views: set):
-    pass
+# def negativeExtrudeSketchProfile(rootComp: adsk.fusion.Component,
+#                                     sketch: adsk.fusion.Sketch,
+#                                     views: dict):
+#     ui = adsk.core.Application.get().userInterface
+#     for profile in sketch.profiles:
+#         # Check if the profile has a closed loop rectangle
+#         bb = profile.boundingBox
+#         if bb.minPoint.x == 0 and bb.minPoint.y == 0 and bb.maxPoint.x == 100 and bb.maxPoint.y == 100:
+#             continue
+#         elif bb.minPoint.x == 0 and bb.minPoint.y == -100 and bb.maxPoint.x == 100 and bb.maxPoint.y == 0: # Front and Back
+#             continue
+        
+#         # Calculate the centroid of the profile using the bounding box
+#         centroid = adsk.core.Point3D.create(10*abs(bb.minPoint.x + bb.maxPoint.x) / 2, 10*abs(bb.minPoint.y + bb.maxPoint.y) / 2, 0)
+#         ui.messageBox(f'Sketch: {sketch.name}, Centroid: {centroid.x}, {centroid.y}, {centroid.z}')
+#         # Calculate the depth of the profile inside the sketch
+#         if sketch.name == 'Front':
+#             depth = None
+#             # Look for all vertical lines in left right views
+#             points = views['Left']['Points'] # is a list of tuples (x, y)
+#             lines = views['Left']['Lines'] # is a list of tuples index pairs
+#             possible_depths = []
+#             # Starting from Y=0, find the line that intersects the z-value == (centroid.y)
+#             for line in lines:
+#                 # Check if line is vertical
+#                 if points[line[0]][0] == points[line[1]][0]:
+#                     # ui.messageBox('Line: {}, {} is vertical'.format(points[line[0]], points[line[1]]))
+#                     # Check if the line intersects the centroid, same y-value, 
+#                     if points[line[0]][1] <= centroid.y <= points[line[1]][1] or points[line[1]][1] <= centroid.y <= points[line[0]][1]:
+#                         # ui.messageBox('Line: {}, {} intersects centroid'.format(points[line[0]], points[line[1]]))
+#                         possible_depths.append(abs(points[line[0]][0]))
+#             if len(possible_depths) <= 2:
+#                 continue
+#             else:
+#                 # Select the second smallest depth
+#                 depth = sorted(possible_depths)[1]
+            
+#             points = views['Right']['Points'] # is a list of tuples (x, y)
+#             lines = views['Right']['Lines'] # is a list of tuples index pairs
 
 
 def run(context):
@@ -141,17 +176,12 @@ def run(context):
         design: adsk.core.Product = app.activeProduct
         importManager: adsk.core.ImportManager = app.importManager
         rootComp: adsk.fusion.Component = design.rootComponent
-    
-        # app.activeProduct.unitsManager.defaultLengthUnits = adsk.fusion.DistanceUnits.MeterDistanceUnits
-        # defaultUnits = app.activeProduct.unitsManager.defaultLengthUnits
-        # defaultUnits.
-        # app.preferences.defaultUnitsPreferences.item(0) = adsk.fusion.DistanceUnits.MeterDistanceUnits
 
         # Clear all existing sketches, bodies, construction planes, construction axes, and construction points
         for _ in range(10):
             clearAll(rootComp)
 
-        # Get the xy plane
+        # # Get the xy plane
         sketches = rootComp.sketches
 
         # Create a new sketch on the xy plane
@@ -160,7 +190,7 @@ def run(context):
         # Extrude all the sketches
         for sketch in sketches:
             positiveExtrudeSketch(rootComp, sketch)
-            ui.inputBox('Press Enter to continue')
+            # ui.inputBox('Press Enter to continue')
         # Add a bounding square to the sketch
         for sketch in sketches:
             addBoundingSquareToSketch(sketch)
@@ -168,12 +198,12 @@ def run(context):
         for sketch in sketches:
             negativeExtrudeSketch(rootComp, sketch)
 
-        front, back, left, right, bottom, top = parse_view(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sketches', sketchDir))
-        views = {front, back, left, right, bottom, top}
+        # front, back, left, right, bottom, top = parse_view(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sketches', sketchDir))
+        # views = {'Front': front, 'Back': back, 'Left': left, 'Right': right, 'Bottom': bottom, 'Top': top}
         
         # Negative exturde individual profiles by estimating the depth of each profile inside a sketch using other views
-        for sketch in sketches:
-            negativeExtrudeSketchProfile(rootComp, sketch, views)
+        # for sketch in sketches:
+            # negativeExtrudeSketchProfile(rootComp, sketch, views)
 
         # Rename the bodies
         for body in rootComp.bRepBodies:
